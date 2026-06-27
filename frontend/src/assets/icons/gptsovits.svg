@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="gptsovits-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#gptsovits-grad)"/>
+  <path d="M16 16H22C24.2 16 26 17.8 26 20C26 22.2 24.2 24 22 24H16V16Z" fill="white" opacity="0.9"/>
+  <path d="M16 24H23C25.2 24 27 25.8 27 28C27 30.2 25.2 32 23 32H16V24Z" fill="white"/>
+  <rect x="28" y="16" width="4" height="16" rx="2" fill="white"/>
+</svg>

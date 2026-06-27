@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="cosy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35"/>
+      <stop offset="100%" style="stop-color:#F7931E"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#cosy-grad)"/>
+  <circle cx="24" cy="24" r="10" fill="white"/>
+  <circle cx="24" cy="24" r="6" fill="url(#cosy-grad)"/>
+  <circle cx="24" cy="24" r="2" fill="white"/>
+  <path d="M24 14V18M24 30V34" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M14 24H18M30 24H34" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg>

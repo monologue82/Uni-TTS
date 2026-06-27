@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="fish-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1890FF"/>
+      <stop offset="100%" style="stop-color:#096DD9"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#fish-grad)"/>
+  <ellipse cx="24" cy="24" rx="12" ry="8" fill="white"/>
+  <circle cx="20" cy="23" r="2.5" fill="url(#fish-grad)"/>
+  <path d="M26 23C26 23 28 21 30 23C32 25 28 27 26 25" fill="url(#fish-grad)"/>
+  <path d="M12 24L16 20M12 24L16 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg>
