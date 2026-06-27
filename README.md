@@ -2,9 +2,7 @@
 
   [English](README.en.md) | **简体中文**
 
-  <img src="assets/logo.png" alt="Uni-TTS Logo" width="200" height="200">
-
-  <h1>Uni-TTS</h1>
+  <img src="assets/logo.png" alt="Uni-TTS" width="300" height="300">
 
   <p>
     <strong>一站式多引擎语音合成平台</strong>
