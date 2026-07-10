@@ -2,7 +2,7 @@
   <div>
     <div class="text-center mb-16">
       <h1 class="text-display-lg mb-4" style="color: var(--ink)">选择 TTS 引擎</h1>
-      <p class="text-subtitle" style="color: var(--steel)">集成 8 大主流开源 TTS 引擎，一站式语音合成</p>
+      <p class="text-subtitle" style="color: var(--steel)">集成 9 大主流开源 TTS 引擎，一站式语音合成</p>
     </div>
 
     <div v-if="loading" class="flex justify-center py-24">

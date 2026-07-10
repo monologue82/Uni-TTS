@@ -44,6 +44,9 @@ def _check_installed(name):
     # ASR only needs venv, no engine directory
     if name == "asr":
         return vd.exists() and any(vd.iterdir())
+    # OmniVoice is installed via pip, no engine directory needed
+    if name == "omnivoice":
+        return vd.exists() and any(vd.iterdir())
     ed = BASE_DIR / "engines" / name
     return ed.exists() and vd.exists() and any(vd.iterdir())
 
@@ -467,65 +470,69 @@ def _do_install(name: str, info: dict, flash_attention: bool, device_type: str):
             set_done()
             return
 
-        # Step 1: Clone
-        need_clone = False
-        if not engine_dir.exists():
-            need_clone = True
-        elif (engine_dir / ".git").exists():
-            # Check if there are actual files besides .git
-            has_files = any(f.name != ".git" for f in engine_dir.iterdir())
-            if not has_files:
-                _log(name, "检测到不完整的克隆目录（只有 .git），正在清理...")
-                shutil.rmtree(engine_dir, ignore_errors=True)
-                need_clone = True
-
-        if need_clone:
-            set_progress("正在克隆仓库...", 5)
-            _log(name, f"$ git clone {info['github_repo']}")
-            # Use GIT_TERMINAL_PROMPT=0 to prevent hanging on auth prompts
-            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_SSL_NO_VERIFY": "1"}
-            try:
-                proc = subprocess.Popen(
-                    ["git", "clone", info["github_repo"], str(engine_dir)],
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                    text=True, bufsize=1, encoding="utf-8", errors="replace",
-                    env=env,
-                )
-                for line in proc.stdout:
-                    line = line.rstrip()
-                    if line:
-                        _log(name, line)
-                proc.wait(timeout=600)  # 10 minute timeout for clone
-                rc = proc.returncode
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                _log(name, "克隆超时（10分钟）")
-                if engine_dir.exists():
-                    shutil.rmtree(engine_dir, ignore_errors=True)
-                set_fail("克隆超时，请检查网络连接")
-                return
-            except Exception as e:
-                _log(name, f"克隆异常: {e}")
-                rc = -1
-
-            if rc != 0:
-                _log(name, f"git clone 返回错误码: {rc}")
-                if engine_dir.exists():
-                    shutil.rmtree(engine_dir, ignore_errors=True)
-                set_fail("克隆失败，请检查网络连接")
-                return
-
-            # Verify clone succeeded - must have files besides .git
+        # Step 1: Clone — skip for pip-only engines like omnivoice
+        if name == "omnivoice":
+            set_progress("跳过克隆（pip 安装模式）", 25)
+            engine_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            need_clone = False
             if not engine_dir.exists():
-                set_fail("克隆失败：目录未创建")
-                return
-            files = [f for f in engine_dir.iterdir() if f.name != ".git"]
-            if not files:
-                _log(name, "克隆完成但目录为空，正在清理...")
-                shutil.rmtree(engine_dir, ignore_errors=True)
-                set_fail("克隆失败：仓库目录为空，请检查网络或仓库地址")
-                return
-            _log(name, f"✓ 克隆成功，共 {len(files)} 个文件/目录")
+                need_clone = True
+            elif (engine_dir / ".git").exists():
+                # Check if there are actual files besides .git
+                has_files = any(f.name != ".git" for f in engine_dir.iterdir())
+                if not has_files:
+                    _log(name, "检测到不完整的克隆目录（只有 .git），正在清理...")
+                    shutil.rmtree(engine_dir, ignore_errors=True)
+                    need_clone = True
+
+            if need_clone:
+                set_progress("正在克隆仓库...", 5)
+                _log(name, f"$ git clone {info['github_repo']}")
+                # Use GIT_TERMINAL_PROMPT=0 to prevent hanging on auth prompts
+                env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_SSL_NO_VERIFY": "1"}
+                try:
+                    proc = subprocess.Popen(
+                        ["git", "clone", info["github_repo"], str(engine_dir)],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        text=True, bufsize=1, encoding="utf-8", errors="replace",
+                        env=env,
+                    )
+                    for line in proc.stdout:
+                        line = line.rstrip()
+                        if line:
+                            _log(name, line)
+                    proc.wait(timeout=600)  # 10 minute timeout for clone
+                    rc = proc.returncode
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    _log(name, "克隆超时（10分钟）")
+                    if engine_dir.exists():
+                        shutil.rmtree(engine_dir, ignore_errors=True)
+                    set_fail("克隆超时，请检查网络连接")
+                    return
+                except Exception as e:
+                    _log(name, f"克隆异常: {e}")
+                    rc = -1
+
+                if rc != 0:
+                    _log(name, f"git clone 返回错误码: {rc}")
+                    if engine_dir.exists():
+                        shutil.rmtree(engine_dir, ignore_errors=True)
+                    set_fail("克隆失败，请检查网络连接")
+                    return
+
+                # Verify clone succeeded - must have files besides .git
+                if not engine_dir.exists():
+                    set_fail("克隆失败：目录未创建")
+                    return
+                files = [f for f in engine_dir.iterdir() if f.name != ".git"]
+                if not files:
+                    _log(name, "克隆完成但目录为空，正在清理...")
+                    shutil.rmtree(engine_dir, ignore_errors=True)
+                    set_fail("克隆失败：仓库目录为空，请检查网络或仓库地址")
+                    return
+                _log(name, f"✓ 克隆成功，共 {len(files)} 个文件/目录")
 
         set_progress("仓库克隆完成", 25)
 

@@ -186,6 +186,18 @@ ENGINE_REGISTRY = [
         "flash_attention": True,
     },
     {
+        "name": "omnivoice",
+        "display_name": "OmniVoice",
+        "port": 7869,
+        "github_repo": "",
+        "model_scope_id": "k2-fsa/OmniVoice",
+        "python_version": "3.10",
+        "description": "小米600+语言零样本TTS，支持语音克隆和语音设计",
+        "min_vram_gb": 6,
+        "entry_script": "",
+        "flash_attention": False,
+    },
+    {
         "name": "asr",
         "display_name": "SenseVoice ASR",
         "port": 0,

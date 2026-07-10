@@ -34,8 +34,37 @@
           </p>
         </div>
 
+        <!-- OmniVoice: Voice Mode Selector -->
+        <div v-if="isOmniVoice" class="glass rounded-xl p-6">
+          <label class="text-body-sm font-medium block mb-3" style="color: var(--ink)">语音模式</label>
+          <div class="flex gap-2">
+            <button v-for="m in [{v:'clone',l:'语音克隆',d:'从参考音频克隆音色'},{v:'design',l:'语音设计',d:'通过描述创造声音'},{v:'auto',l:'自动语音',d:'模型自动选择音色'}]"
+              :key="m.v" @click="omniVoiceMode = m.v"
+              class="flex-1 px-3 py-3 rounded-lg text-center transition-all duration-150"
+              :style="omniVoiceMode === m.v
+                ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
+                : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
+              <div class="text-body-sm font-medium">{{ m.l }}</div>
+              <div class="text-micro mt-0.5 opacity-70">{{ m.d }}</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- OmniVoice: Voice Design Instruct -->
+        <div v-if="isOmniVoice && omniVoiceMode === 'design'" class="glass rounded-xl p-6">
+          <label class="text-body-sm font-medium block mb-3" style="color: var(--ink)">
+            语音描述 <span style="color: var(--muted)" class="font-normal">(Voice Design)</span>
+          </label>
+          <input v-model="omniInstruct" type="text" class="w-full rounded-md px-4 py-2.5 text-body-md transition-colors"
+            style="background: var(--bg-input); color: var(--ink); border: 1px solid var(--border-hairline)"
+            placeholder="如：female, low pitch, british accent / 男，低沉，四川话" />
+          <p class="text-micro mt-2" style="color: var(--muted)">
+            支持属性：性别(gender)、年龄(age)、音调(pitch)、风格(whisper)、口音(accent/dialect)等，用逗号分隔
+          </p>
+        </div>
+
         <!-- Reference Audio -->
-        <div class="glass rounded-xl p-6">
+        <div v-if="!isOmniVoice || omniVoiceMode === 'clone'" class="glass rounded-xl p-6">
           <label class="text-body-sm font-medium block mb-3" style="color: var(--ink)">
             {{ isVoxCPM ? '参考音频 (可选 — 上传后用于克隆)' : '参考音频 (音色克隆)' }}
           </label>
@@ -185,6 +214,24 @@
           </div>
         </div>
 
+        <!-- OmniVoice: Advanced Settings -->
+        <div v-if="isOmniVoice" class="glass rounded-xl p-6">
+          <h3 class="text-body-sm font-medium mb-5 cursor-pointer flex items-center gap-2" style="color: var(--ink)" @click="showAdvanced = !showAdvanced">
+            <svg class="w-4 h-4 transition-transform duration-200" :style="{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            高级设置
+          </h3>
+          <div v-show="showAdvanced" class="space-y-5">
+            <div>
+              <label class="flex items-center justify-between text-micro mb-2" style="color: var(--steel)">
+                <span>Diffusion 步数</span>
+                <span class="font-mono">{{ omniNumStep }}</span>
+              </label>
+              <input type="range" v-model.number="omniNumStep" min="8" max="64" step="1" class="w-full" />
+              <p class="text-micro mt-1" style="color: var(--muted)">步数越多质量越高（默认32），16步可加速推理</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Generate Button -->
         <button @click="synthesize" :disabled="!text || generating" class="btn-primary w-full py-3.5 text-base flex items-center justify-center gap-2">
           <div v-if="generating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -223,32 +270,34 @@
               </label>
               <input type="range" v-model.number="speed" min="0.5" max="2.0" step="0.1" class="w-full" />
             </div>
-            <div>
-              <label class="flex items-center justify-between text-micro mb-2" style="color: var(--steel)">
-                <span>音调</span><span class="font-mono">{{ pitch > 0 ? '+' : '' }}{{ pitch }}</span>
-              </label>
-              <input type="range" v-model.number="pitch" min="-12" max="12" step="1" class="w-full" />
-            </div>
-            <div>
-              <label class="text-micro block mb-2" style="color: var(--steel)">语言</label>
-              <select v-model="language" class="w-full rounded-md px-3 py-2 text-body-sm transition-colors" style="background: var(--bg-input); color: var(--ink); border: 1px solid var(--border-hairline)">
-                <option value="zh">中文</option>
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-                <option value="ko">한국어</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-micro block mb-2" style="color: var(--steel)">情感</label>
-              <div class="flex flex-wrap gap-2">
-                <button v-for="e in emotions" :key="e.value" @click="emotion = e.value" class="px-3.5 py-1.5 rounded-full text-micro font-medium transition-all duration-150"
-                  :style="emotion === e.value
-                    ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
-                    : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
-                  {{ e.label }}
-                </button>
+            <template v-if="!isOmniVoice">
+              <div>
+                <label class="flex items-center justify-between text-micro mb-2" style="color: var(--steel)">
+                  <span>音调</span><span class="font-mono">{{ pitch > 0 ? '+' : '' }}{{ pitch }}</span>
+                </label>
+                <input type="range" v-model.number="pitch" min="-12" max="12" step="1" class="w-full" />
               </div>
-            </div>
+              <div>
+                <label class="text-micro block mb-2" style="color: var(--steel)">语言</label>
+                <select v-model="language" class="w-full rounded-md px-3 py-2 text-body-sm transition-colors" style="background: var(--bg-input); color: var(--ink); border: 1px solid var(--border-hairline)">
+                  <option value="zh">中文</option>
+                  <option value="en">English</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-micro block mb-2" style="color: var(--steel)">情感</label>
+                <div class="flex flex-wrap gap-2">
+                  <button v-for="e in emotions" :key="e.value" @click="emotion = e.value" class="px-3.5 py-1.5 rounded-full text-micro font-medium transition-all duration-150"
+                    :style="emotion === e.value
+                      ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
+                      : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
+                    {{ e.label }}
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -286,6 +335,7 @@ const engine = route.params.engine;
 const engineInfo = ref(null);
 const engineReady = ref(false);
 const isVoxCPM = computed(() => engine === "voxcpm");
+const isOmniVoice = computed(() => engine === "omnivoice");
 
 const text = ref("");
 const refAudio = ref(null);
@@ -316,6 +366,11 @@ const denoise = ref(false);
 const showAdvanced = ref(false);
 const asrAvailable = ref(false);
 const asrReminder = ref("");
+
+// OmniVoice-specific
+const omniVoiceMode = ref("clone"); // clone | design | auto
+const omniInstruct = ref("");
+const omniNumStep = ref(32);
 
 // Microphone
 const isRecording = ref(false);
@@ -449,6 +504,14 @@ async function synthesize() {
       fd.append("dit_steps", ditSteps.value);
       fd.append("normalize", normalizeText.value);
       fd.append("denoise", denoise.value);
+    } else if (isOmniVoice.value) {
+      if (omniVoiceMode.value === "design") {
+        fd.append("instruct", omniInstruct.value);
+      }
+      fd.append("num_step", omniNumStep.value);
+      if (omniVoiceMode.value === "clone") {
+        fd.append("ref_text", refText.value);
+      }
     } else {
       fd.append("ref_text", refText.value);
       fd.append("description", description.value);
@@ -476,6 +539,12 @@ async function batchSynthesize() {
     fd.append("pitch", pitch.value);
     fd.append("emotion", emotion.value);
     if (refAudio.value) fd.append("ref_audio", refAudio.value);
+    if (isOmniVoice.value) {
+      if (omniVoiceMode.value === "design") {
+        fd.append("instruct", omniInstruct.value);
+      }
+      fd.append("num_step", omniNumStep.value);
+    }
     await axios.post("/api/batch/create", fd);
     batchDone.value = lines.length;
   } catch (e) { error.value = e.message; }

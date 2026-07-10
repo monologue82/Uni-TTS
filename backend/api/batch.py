@@ -19,6 +19,8 @@ async def create_batch(
     speed: float = Form(1.0),
     pitch: float = Form(0.0),
     emotion: str = Form("neutral"),
+    instruct: str = Form(""),
+    num_step: int = Form(32),
 ):
     text_list = [t.strip() for t in texts.split("\n") if t.strip()]
     if not text_list:
@@ -38,6 +40,8 @@ async def create_batch(
         "pitch": pitch,
         "emotion": emotion,
         "ref_audio": ref_audio_path,
+        "instruct": instruct,
+        "num_step": num_step,
     })
 
     db = await get_db()

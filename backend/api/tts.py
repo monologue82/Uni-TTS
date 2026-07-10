@@ -44,6 +44,8 @@ async def synthesize(
     dit_steps: int = Form(10),
     normalize: bool = Form(False),
     denoise: bool = Form(False),
+    instruct: str = Form(""),
+    num_step: int = Form(32),
 ):
     ref_audio_path = None
     if ref_audio:
@@ -75,6 +77,8 @@ async def synthesize(
                 "dit_steps": dit_steps,
                 "normalize": normalize,
                 "denoise": denoise,
+                "instruct": instruct,
+                "num_step": num_step,
                 "output": str(output_file),
             }
             conn = http.client.HTTPConnection("127.0.0.1", server_info["port"], timeout=None)
