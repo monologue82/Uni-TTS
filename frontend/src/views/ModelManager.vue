@@ -7,7 +7,7 @@
 
     <div class="flex gap-2 mb-8">
       <button v-for="t in tabs" :key="t.key" @click="tab = t.key"
-        class="px-5 py-2 rounded-full text-body-sm font-medium transition-all duration-150"
+        class="btn-press px-5 py-2 rounded-full text-body-sm font-medium transition-all duration-150"
         :style="tab === t.key ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)' : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
         {{ t.label }}
       </button>
@@ -15,7 +15,8 @@
 
     <!-- ── Engine Install Tab ── -->
     <div v-if="tab === 'engines'" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <div v-for="eng in engines" :key="eng.name" class="glass rounded-xl p-6 transition-all duration-150 hover:shadow-card-hover">
+      <div v-for="(eng, i) in engines" :key="eng.name" class="glass rounded-xl p-6 stagger-card hover-lift"
+        :style="{ animationDelay: (i * 60) + 'ms' }">
         <div class="flex items-start justify-between mb-3">
           <div>
             <h3 class="text-card-title" style="color: var(--ink)">{{ eng.display_name }}</h3>
@@ -36,14 +37,14 @@
           <div class="mb-3">
             <label class="text-micro block mb-2" style="color: var(--steel)">安装类型</label>
             <div class="flex gap-2">
-              <button @click="deviceType[eng.name] = 'cpu'" class="flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center"
+              <button @click="deviceType[eng.name] = 'cpu'" class="btn-press flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center"
                 :style="deviceType[eng.name] === 'cpu'
                   ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
                   : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
                 CPU 版本
               </button>
               <button @click="deviceType[eng.name] = 'gpu'" :disabled="gpuInfo && !gpuInfo.gpu_available"
-                class="flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center"
+                class="btn-press flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center"
                 :style="deviceType[eng.name] === 'gpu'
                   ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
                   : gpuInfo && !gpuInfo.gpu_available
@@ -68,14 +69,14 @@
           </label>
 
           <button @click="installEngine(eng)" :disabled="installRunning[eng.name]"
-            class="btn-primary w-full py-2.5 text-body-sm flex items-center justify-center gap-2">
+            class="btn-primary btn-press w-full py-2.5 text-body-sm flex items-center justify-center gap-2">
             <div v-if="installRunning[eng.name]" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             {{ installRunning[eng.name] ? "安装中..." : "安装引擎" }}
           </button>
         </div>
         <div v-else>
           <button @click="confirmUninstall(eng)" :disabled="uninstallRunning[eng.name]"
-            class="w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
+            class="btn-press w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
             :style="uninstallRunning[eng.name]
               ? 'background: var(--bg-surface); color: var(--muted); cursor: wait'
               : 'border: 1px solid var(--error-border); color: var(--error-text); background: var(--error-bg)'">
@@ -91,7 +92,7 @@
             <span>{{ installPercent[eng.name] || 0 }}%</span>
           </div>
           <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: var(--border-hairline)">
-            <div class="rounded-full h-1.5 transition-all duration-500 ease-out" style="background: var(--btn-primary-bg)" :style="{ width: (installPercent[eng.name] || 0) + '%' }"></div>
+            <div class="rounded-full h-1.5 progress-shimmer transition-all duration-500 ease-out" style="background: var(--btn-primary-bg)" :style="{ width: (installPercent[eng.name] || 0) + '%' }"></div>
           </div>
           <p v-if="installError[eng.name]" class="text-micro mt-2" style="color: var(--error-text)">{{ installError[eng.name] }}</p>
         </div>
@@ -115,8 +116,8 @@
 
     <!-- ── Model Download Tab ── -->
     <div v-if="tab === 'models'" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <div v-for="model in models" :key="model.engine_name + (model.is_asr ? '-asr' : '')" class="glass rounded-xl p-6 transition-all duration-150 hover:shadow-card-hover"
-        :style="model.is_asr ? 'border-left: 3px solid var(--badge-loaded-text)' : ''">
+      <div v-for="(model, i) in models" :key="model.engine_name + (model.is_asr ? '-asr' : '')" class="glass rounded-xl p-6 stagger-card hover-lift"
+        :style="{ animationDelay: (i * 60) + 'ms', borderLeft: model.is_asr ? '3px solid var(--badge-loaded-text)' : '' }">
         <div class="flex items-start justify-between mb-3">
           <div>
             <h3 class="text-card-title" style="color: var(--ink)">{{ model.display_name }}</h3>
@@ -135,9 +136,30 @@
           <span class="truncate">{{ model.model_dir }}</span>
         </div>
 
+        <!-- Source toggle -->
+        <div class="flex gap-2 mb-3">
+          <button @click="dlSource[model.engine_name + (model.is_asr ? '-asr' : '')] = 'modelscope'"
+            class="flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center btn-press"
+            :style="(dlSource[model.engine_name + (model.is_asr ? '-asr' : '')] || 'modelscope') === 'modelscope'
+              ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
+              : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
+            ModelScope
+          </button>
+          <button @click="dlSource[model.engine_name + (model.is_asr ? '-asr' : '')] = 'huggingface'"
+            class="flex-1 px-3 py-1.5 rounded-lg text-micro font-medium transition-all duration-150 text-center btn-press"
+            :style="dlSource[model.engine_name + (model.is_asr ? '-asr' : '')] === 'huggingface'
+              ? 'background: var(--btn-primary-bg); color: var(--btn-primary-text)'
+              : 'background: var(--btn-tertiary-bg); color: var(--steel); border: 1px solid var(--border-hairline)'">
+            HuggingFace
+          </button>
+        </div>
+        <p class="text-micro mb-3 font-mono" style="color: var(--muted)">
+          {{ (dlSource[model.engine_name + (model.is_asr ? '-asr' : '')] || 'modelscope') === 'huggingface' ? model.huggingface_id : model.model_scope_id }}
+        </p>
+
         <div class="flex gap-2">
           <button @click="downloadModel(model)" :disabled="dlRunning[model.engine_name + (model.is_asr ? '-asr' : '')]"
-            class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
+            class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2 btn-press"
             :class="dlRunning[model.engine_name + (model.is_asr ? '-asr' : '')] ? '' : model.downloaded ? 'btn-tertiary' : 'btn-primary'"
             :style="dlRunning[model.engine_name + (model.is_asr ? '-asr' : '')] ? 'background: var(--bg-surface); color: var(--muted); cursor: wait' : ''">
             <div v-if="dlRunning[model.engine_name + (model.is_asr ? '-asr' : '')]" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -145,7 +167,7 @@
             {{ dlRunning[model.engine_name + (model.is_asr ? '-asr' : '')] ? "下载中..." : model.downloaded ? "重新下载" : "下载模型" }}
           </button>
           <button v-if="model.downloaded" @click="confirmDeleteModel(model)"
-            class="px-4 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center gap-1.5"
+            class="btn-press px-4 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center gap-1.5"
             :style="deleteModelRunning[model.engine_name + (model.is_asr ? '-asr' : '')]
               ? 'background: var(--bg-surface); color: var(--muted); cursor: wait'
               : 'border: 1px solid var(--error-border); color: var(--error-text); background: var(--error-bg)'">
@@ -160,7 +182,7 @@
             <span>{{ dlProgress[model.engine_name + (model.is_asr ? '-asr' : '')] }}%</span>
           </div>
           <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: var(--border-hairline)">
-            <div class="rounded-full h-1.5 transition-all duration-500 ease-out" style="background: var(--btn-primary-bg)" :style="{ width: dlProgress[model.engine_name + (model.is_asr ? '-asr' : '')] + '%' }"></div>
+            <div class="rounded-full h-1.5 progress-shimmer transition-all duration-500 ease-out" style="background: var(--btn-primary-bg)" :style="{ width: dlProgress[model.engine_name + (model.is_asr ? '-asr' : '')] + '%' }"></div>
           </div>
         </div>
       </div>
@@ -176,16 +198,17 @@
     </div>
 
     <!-- Toast -->
-    <transition name="fade">
+    <transition name="toast">
       <div v-if="toast" class="fixed bottom-6 right-6 z-50 glass-strong rounded-xl px-6 py-4 max-w-sm shadow-card-hover" :style="{ borderLeft: '4px solid ' + (toast.type === 'error' ? 'var(--error-text)' : 'var(--badge-ready-text)') }">
         <p class="text-body-sm" style="color: var(--charcoal)">{{ toast.msg }}</p>
       </div>
     </transition>
 
     <!-- Uninstall Confirm Modal -->
-    <transition name="fade">
+    <transition name="backdrop">
       <div v-if="uninstallTarget" class="fixed inset-0 z-50 flex items-center justify-center" style="background: var(--overlay); backdrop-filter: blur(4px)" @click.self="cancelUninstall">
-        <div class="glass-strong rounded-hero p-8 max-w-sm w-full mx-4 shadow-modal">
+        <transition name="modal" appear>
+          <div v-if="uninstallTarget" class="glass-strong rounded-hero p-8 max-w-sm w-full mx-4 shadow-modal">
           <!-- Confirm state -->
           <template v-if="!uninstallPhase">
             <div class="text-center mb-6">
@@ -204,9 +227,9 @@
               </ul>
             </div>
             <div class="flex gap-3">
-              <button @click="cancelUninstall" class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
+              <button @click="cancelUninstall" class="btn-press flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
                 style="border: 1px solid var(--border-hairline); color: var(--steel)">取消</button>
-              <button @click="doUninstall" class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
+              <button @click="doUninstall" class="btn-press flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
                 style="background: var(--error-text); color: white">
                 确认卸载
               </button>
@@ -231,18 +254,20 @@
               </div>
               <h3 class="text-heading-sm mb-2" style="color: var(--ink)">卸载完成</h3>
               <p class="text-body-sm" style="color: var(--steel)">{{ uninstallTarget.display_name }} 已成功卸载</p>
-              <button @click="finishUninstall" class="mt-6 w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
+              <button @click="finishUninstall" class="btn-press mt-6 w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
                 style="background: var(--btn-primary-bg); color: var(--btn-primary-text)">完成</button>
             </div>
           </template>
         </div>
+        </transition>
       </div>
     </transition>
 
     <!-- Delete Model Confirm Modal -->
-    <transition name="fade">
+    <transition name="backdrop">
       <div v-if="deleteModelTarget" class="fixed inset-0 z-50 flex items-center justify-center" style="background: var(--overlay); backdrop-filter: blur(4px)" @click.self="cancelDeleteModel">
-        <div class="glass-strong rounded-hero p-8 max-w-sm w-full mx-4 shadow-modal">
+        <transition name="modal" appear>
+          <div v-if="deleteModelTarget" class="glass-strong rounded-hero p-8 max-w-sm w-full mx-4 shadow-modal">
           <!-- Confirm state -->
           <template v-if="!deleteModelPhase">
             <div class="text-center mb-6">
@@ -260,9 +285,9 @@
               </ul>
             </div>
             <div class="flex gap-3">
-              <button @click="cancelDeleteModel" class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
+              <button @click="cancelDeleteModel" class="btn-press flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
                 style="border: 1px solid var(--border-hairline); color: var(--steel)">取消</button>
-              <button @click="doDeleteModel" class="flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
+              <button @click="doDeleteModel" class="btn-press flex-1 py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2"
                 style="background: var(--error-text); color: white">
                 确认删除
               </button>
@@ -287,11 +312,12 @@
               </div>
               <h3 class="text-heading-sm mb-2" style="color: var(--ink)">删除完成</h3>
               <p class="text-body-sm" style="color: var(--steel)">{{ deleteModelTarget.display_name }} 模型已删除</p>
-              <button @click="finishDeleteModel" class="mt-6 w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
+              <button @click="finishDeleteModel" class="btn-press mt-6 w-full py-2.5 rounded-full text-body-sm font-semibold transition-all duration-150"
                 style="background: var(--btn-primary-bg); color: var(--btn-primary-text)">完成</button>
             </div>
           </template>
         </div>
+        </transition>
       </div>
     </transition>
   </div>
@@ -331,6 +357,7 @@ let sseSources = {};
 const dlRunning = reactive({});
 const dlProgress = reactive({});
 const dlDetail = reactive({});
+const dlSource = reactive({}); // "modelscope" or "huggingface" per model key
 
 const totalSize = computed(() => models.value.reduce((s, m) => s + m.total_size_mb, 0).toFixed(0));
 
@@ -451,17 +478,19 @@ function finishUninstall() {
 
 async function downloadModel(model) {
   const key = model.engine_name + (model.is_asr ? '-asr' : '');
+  const source = dlSource[key] || 'modelscope';
   dlRunning[key] = true;
   dlProgress[key] = 0;
   dlDetail[key] = "正在准备...";
   try {
     const { data } = await axios.post("/api/models/download", {
       engine_name: model.engine_name,
-      model_id: model.model_scope_id,
+      model_id: source === 'huggingface' ? model.huggingface_id : model.model_scope_id,
       is_asr: !!model.is_asr,
+      source: source,
     });
     if (data.task_id) pollDlTask(data.task_id, key, model.engine_name);
-    showToast(`${model.display_name} 开始下载`);
+    showToast(`${model.display_name} 开始下载 (${source === 'huggingface' ? 'HuggingFace' : 'ModelScope'})`);
   } catch (e) {
     showToast(`下载失败: ${e.message}`, "error");
     dlRunning[key] = false;

@@ -59,6 +59,7 @@ class DownloadRequest(BaseModel):
     model_id: str | None = None
     local_dir: str | None = None
     is_asr: bool = False
+    source: str | None = None  # "modelscope" or "huggingface"
 
 
 @router.get("/")
@@ -82,6 +83,7 @@ async def list_models():
         "engine_name": "asr",
         "display_name": "SenseVoiceSmall (ASR 语音识别)",
         "model_scope_id": "iic/SenseVoiceSmall",
+        "huggingface_id": "FunAudioLLM/SenseVoiceSmall",
         "model_dir": str(asr_dir),
         "downloaded": asr_downloaded,
         "total_size_mb": round(asr_size / 1024 / 1024, 1),
@@ -106,6 +108,7 @@ async def list_models():
             "engine_name": name,
             "display_name": eng["display_name"],
             "model_scope_id": eng["model_scope_id"],
+            "huggingface_id": eng.get("huggingface_id", ""),
             "model_dir": str(model_dir),
             "downloaded": has_models,
             "total_size_mb": round(total_size / 1024 / 1024, 1),
@@ -118,11 +121,15 @@ async def list_models():
 async def download_model(req: DownloadRequest, background_tasks: BackgroundTasks):
     engine_name = req.engine_name
     model_id = req.model_id
+    source = req.source or "modelscope"
 
     if not model_id:
         for eng in ENGINE_REGISTRY:
             if eng["name"] == engine_name:
-                model_id = eng["model_scope_id"]
+                if source == "huggingface":
+                    model_id = eng.get("huggingface_id", eng["model_scope_id"])
+                else:
+                    model_id = eng["model_scope_id"]
                 break
 
     if not model_id:
@@ -131,7 +138,8 @@ async def download_model(req: DownloadRequest, background_tasks: BackgroundTasks
     # Handle shared ASR model
     if req.is_asr or engine_name == "asr":
         local_dir = req.local_dir or str(BASE_DIR / "models" / "asr" / "SenseVoiceSmall")
-        model_id = model_id or "iic/SenseVoiceSmall"
+        if not model_id:
+            model_id = "iic/SenseVoiceSmall" if source == "modelscope" else "FunAudioLLM/SenseVoiceSmall"
     else:
         local_dir = req.local_dir or str(BASE_DIR / "models" / engine_name)
 
@@ -158,13 +166,13 @@ async def download_model(req: DownloadRequest, background_tasks: BackgroundTasks
 
     _download_progress[task_id] = {"progress": 0, "status": "running", "error": None, "detail": ""}
 
-    background_tasks.add_task(_run_download_thread, task_id, model_id, local_dir, engine_name)
+    background_tasks.add_task(_run_download_thread, task_id, model_id, local_dir, engine_name, source)
 
     return {"task_id": task_id, "model_id": model_id, "local_dir": local_dir, "status": "running"}
 
 
-def _run_download_thread(task_id, model_id, local_dir, engine_name):
-    t = threading.Thread(target=_do_download_sync, args=(task_id, model_id, local_dir, engine_name), daemon=True)
+def _run_download_thread(task_id, model_id, local_dir, engine_name, source="modelscope"):
+    t = threading.Thread(target=_do_download_sync, args=(task_id, model_id, local_dir, engine_name, source), daemon=True)
     t.start()
 
 
@@ -211,7 +219,7 @@ def _extract_archives(local_dir, task_id):
             pass
 
 
-def _do_download_sync(task_id, model_id, local_dir, engine_name):
+def _do_download_sync(task_id, model_id, local_dir, engine_name, source="modelscope"):
     import os
     os.environ.setdefault("MODELSCOPE_CACHE", str(BASE_DIR / ".modelscope_cache"))
 
@@ -226,19 +234,16 @@ def _do_download_sync(task_id, model_id, local_dir, engine_name):
         # Patch tqdm once globally; per-thread state is read from _dl_local
         _patch_tqdm_once()
 
-        # Check if model_id is a HuggingFace model (contains '/' but not ':' for ModelScope)
-        is_huggingface = "/" in model_id and not model_id.startswith("iic/") and not model_id.startswith("Qwen/")
-        
-        if is_huggingface:
+        if source == "huggingface":
             _download_progress[task_id]["detail"] = "正在连接 HuggingFace..."
             _update_db_sync(task_id, "running", 3)
-            
+
             from huggingface_hub import snapshot_download as hf_snapshot_download
-            
+
             _download_progress[task_id]["progress"] = 5
-            _download_progress[task_id]["detail"] = "开始从 HuggingFace 下载..."
+            _download_progress[task_id]["detail"] = f"开始从 HuggingFace 下载 {model_id}..."
             _update_db_sync(task_id, "running", 5)
-            
+
             hf_snapshot_download(model_id, local_dir=local_dir)
         else:
             _download_progress[task_id]["detail"] = "正在连接 ModelScope..."
@@ -247,7 +252,7 @@ def _do_download_sync(task_id, model_id, local_dir, engine_name):
             from modelscope import snapshot_download
 
             _download_progress[task_id]["progress"] = 5
-            _download_progress[task_id]["detail"] = "开始下载..."
+            _download_progress[task_id]["detail"] = f"开始从 ModelScope 下载 {model_id}..."
             _update_db_sync(task_id, "running", 5)
 
             snapshot_download(model_id, local_dir=local_dir)
