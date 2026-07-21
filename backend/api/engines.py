@@ -627,7 +627,10 @@ def _do_install(name: str, info: dict, flash_attention: bool, device_type: str):
             set_progress("正在安装额外组件...", 88)
             for pkg in (extra if isinstance(extra, list) else [extra]):
                 _log(name, f"$ pip install {pkg}")
-                run_stream([pip, "install", pkg] + trusted_hosts, cwd=engine_dir)
+                rc = run_stream([pip, "install", pkg] + trusted_hosts, cwd=engine_dir)
+                if rc != 0:
+                    set_fail(f"安装 {pkg} 失败")
+                    return
 
         # Step 7: Editable install if pyproject.toml exists
         if (engine_dir / "pyproject.toml").exists():
@@ -904,3 +907,87 @@ async def stop_gradio(engine_name: str):
         p.terminate(); p.wait(timeout=5)
         return {"status": "stopped"}
     return {"status": "not_running"}
+
+
+# ── Update endpoints ──────────────────────────────────────────────────────────
+
+@router.get("/update/check")
+async def check_update():
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return {"available": False, "error": "Git not found"}
+
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=str(BASE_DIR), capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return {"available": False, "error": "Not a git repository"}
+
+        subprocess.run(["git", "fetch", "origin"], cwd=str(BASE_DIR),
+                       capture_output=True, timeout=30)
+
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(BASE_DIR), capture_output=True, text=True
+        ).stdout.strip()
+
+        remote = subprocess.run(
+            ["git", "rev-parse", "origin/main"],
+            cwd=str(BASE_DIR), capture_output=True, text=True
+        ).stdout.strip()
+
+        if not remote or local == remote:
+            return {"available": False, "local": local[:8], "remote": remote[:8]}
+
+        log_result = subprocess.run(
+            ["git", "log", "--format=%h|%s|%an|%ai", f"{local}..{remote}"],
+            cwd=str(BASE_DIR), capture_output=True, text=True
+        )
+
+        commits = []
+        for line in log_result.stdout.strip().splitlines():
+            parts = line.split("|", 3)
+            if len(parts) >= 4:
+                commits.append({
+                    "hash": parts[0],
+                    "message": parts[1],
+                    "author": parts[2],
+                    "date": parts[3][:10],
+                })
+
+        return {
+            "available": True,
+            "local": local[:8],
+            "remote": remote[:8],
+            "count": len(commits),
+            "commits": commits,
+        }
+    except subprocess.TimeoutExpired:
+        return {"available": False, "error": "Timeout"}
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
+@router.post("/update/pull")
+async def pull_update():
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return {"success": False, "error": "Git not found"}
+
+    try:
+        result = subprocess.run(
+            ["git", "pull", "origin", "main"],
+            cwd=str(BASE_DIR), capture_output=True, text=True, timeout=60
+        )
+        if result.returncode == 0:
+            return {"success": True, "detail": result.stdout.strip()}
+        else:
+            return {"success": False, "error": result.stderr.strip() or result.stdout.strip()}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "Pull timed out"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

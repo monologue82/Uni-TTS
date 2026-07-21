@@ -50,8 +50,14 @@ def git_pull():
         if result.returncode != 0:
             return False
 
-        subprocess.run(["git", "fetch", "origin"], cwd=str(BASE_DIR),
-                       capture_output=True, timeout=30)
+        fetch_proc = subprocess.Popen(
+            ["git", "fetch", "origin"],
+            cwd=str(BASE_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        fetch_out = fetch_proc.communicate()[0]
+        if fetch_proc.returncode != 0:
+            print("[!] Failed to fetch updates")
+            return False
 
         local = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -67,32 +73,49 @@ def git_pull():
             print("[*] Already up to date")
             return False
 
-        log = subprocess.run(
-            ["git", "log", "--oneline", f"{local}..{remote}"],
-            cwd=str(BASE_DIR), capture_output=True, text=True
-        ).stdout.strip()
-
-        if log:
-            count = len(log.splitlines())
-            print(f"[*] Found {count} new commit(s):")
-            for line in log.splitlines()[:5]:
-                print(f"    {line}")
-            if count > 5:
-                print(f"    ... and {count - 5} more")
-
-        print("[*] Updating...")
-        result = subprocess.run(
-            ["git", "pull", "origin", "main"],
+        log_result = subprocess.run(
+            ["git", "log", "--format=%h %s", f"{local}..{remote}"],
             cwd=str(BASE_DIR), capture_output=True, text=True
         )
-        if result.returncode == 0:
+        log = log_result.stdout.strip()
+        if not log:
+            print("[*] Already up to date")
+            return False
+
+        commits = log.splitlines()
+        print(f"\n[*] Found {len(commits)} new commit(s):")
+        print("-" * 50)
+        for line in commits:
+            print(f"  {line}")
+        print("-" * 50)
+
+        answer = input("\n[*] Update now? (y/N): ").strip().lower()
+        if answer != 'y':
+            print("[*] Skipping update")
+            return False
+
+        print("\n[*] Pulling updates...")
+        pull_proc = subprocess.Popen(
+            ["git", "pull", "origin", "main"],
+            cwd=str(BASE_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        for line in pull_proc.stdout:
+            line = line.rstrip()
+            if line:
+                print(f"    {line}")
+        pull_proc.wait()
+
+        if pull_proc.returncode == 0:
             print("[*] Update completed")
             return True
         else:
-            print(f"[!] Update failed: {result.stderr.strip()}")
+            print("[!] Update failed")
             return False
     except subprocess.TimeoutExpired:
         print("[!] Update check timed out")
+        return False
+    except KeyboardInterrupt:
+        print("\n[*] Skipping update")
         return False
     except Exception as e:
         print(f"[!] Update check failed: {e}")
