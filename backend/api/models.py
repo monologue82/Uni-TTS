@@ -226,16 +226,31 @@ def _do_download_sync(task_id, model_id, local_dir, engine_name):
         # Patch tqdm once globally; per-thread state is read from _dl_local
         _patch_tqdm_once()
 
-        _download_progress[task_id]["detail"] = "正在连接 ModelScope..."
-        _update_db_sync(task_id, "running", 3)
+        # Check if model_id is a HuggingFace model (contains '/' but not ':' for ModelScope)
+        is_huggingface = "/" in model_id and not model_id.startswith("iic/") and not model_id.startswith("Qwen/")
+        
+        if is_huggingface:
+            _download_progress[task_id]["detail"] = "正在连接 HuggingFace..."
+            _update_db_sync(task_id, "running", 3)
+            
+            from huggingface_hub import snapshot_download as hf_snapshot_download
+            
+            _download_progress[task_id]["progress"] = 5
+            _download_progress[task_id]["detail"] = "开始从 HuggingFace 下载..."
+            _update_db_sync(task_id, "running", 5)
+            
+            hf_snapshot_download(model_id, local_dir=local_dir)
+        else:
+            _download_progress[task_id]["detail"] = "正在连接 ModelScope..."
+            _update_db_sync(task_id, "running", 3)
 
-        from modelscope import snapshot_download
+            from modelscope import snapshot_download
 
-        _download_progress[task_id]["progress"] = 5
-        _download_progress[task_id]["detail"] = "开始下载..."
-        _update_db_sync(task_id, "running", 5)
+            _download_progress[task_id]["progress"] = 5
+            _download_progress[task_id]["detail"] = "开始下载..."
+            _update_db_sync(task_id, "running", 5)
 
-        snapshot_download(model_id, local_dir=local_dir)
+            snapshot_download(model_id, local_dir=local_dir)
 
         # Extract archives if the engine requires it (e.g. GPT-SoVITS)
         if _needs_extraction(engine_name):

@@ -43,6 +43,9 @@
 | **MOSS-TTS** | 复旦开源语音全家桶，高保真长文本 | 4 GB |
 | **Fish Audio S2 Pro** | 15000+情感标签，80+语言，100ms首帧 | 8 GB |
 | **OmniVoice** | 小米600+语言零样本TTS，语音克隆+语音设计 | 6 GB |
+| **Confucius4-TTS** | 网易有道多语言跨语言零样本TTS，支持14种语言 | 8 GB |
+| **LongCat-AudioDiT** | 美团高保真扩散式TTS，直接在波形潜空间操作 | 8 GB |
+| **ViiTor Voice** | 三阶段语音克隆栈，支持中英文零样本TTS | 6 GB |
 
 ## 快速开始
 
